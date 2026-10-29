@@ -4,35 +4,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# 1. Konfigurasi Halaman Utama ala Lab Profesional
+# 1. Konfigurasi Halaman Utama
 st.set_page_config(
     page_title="StatLab - Interactive Desktop", 
     page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# Kustomisasi CSS untuk mempercantik tampilan di HP & Browser
-st.markdown("""
-    <style>
-    .main-title { font-size:2.5rem; font-weight:800; color:#1E3A8A; text-align:center; margin-bottom:0.5rem; }
-    .subtitle { text-align:center; color:#6B7280; font-size:1.1rem; margin-bottom:2rem; }
-    .stat-card { background-color:#F3F4F6; padding:20px; border-radius:10px; border-left:5px solid #3B82F6; margin-bottom:10px; }
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown('<div class="main-title">🧪 StatLab: Virtual Statistical Laboratory</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Platform Pengolahan Data & Visualisasi Statistika Deskriptif Otomatis</div>', unsafe_allow_html=True)
+st.title("🧪 StatLab: Virtual Statistical Laboratory")
+st.write("Platform Pengolahan Data & Visualisasi Statistika Deskriptif Otomatis")
 
 # Inisialisasi awal variabel data
 df = pd.DataFrame()
 numeric_cols = []
 
 # =========================================================================
-# PANEL NAVIGASI UTAMA (Menggunakan Sidebar & Ekspander agar Rapi di HP)
+# PANEL NAVIGASI UTAMA (SIDEBAR)
 # =========================================================================
 with st.sidebar:
-    st.image("https://icons8.com", width=80)
     st.header("⚙️ Kontrol Laboratorium")
     
     # Pilihan Metode Input Data
@@ -43,15 +32,12 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("🎨 Pengaturan Grafis")
-    # Fitur Ekstra: Pilihan palet warna visualisasi ala StatLab
-    theme_color = st.selectbox("Palet Warna Grafik:", ["Deep Ocean (Blue)", "Emerald Nature (Green)", "Magma Sunset", "Cyberpunk"])
-    
-    st.info("💡 Semua perubahan parameter di panel ini akan langsung memperbarui kalkulasi lab secara otomatis.")
+    theme_color = st.selectbox("Palet Warna Grafik:", ["Biru (Deep Ocean)", "Hijau (Emerald)", "Jingga (Sunset)"])
 
 # =========================================================================
 # STRUKTUR KOTAK INPUT (Halaman Utama Bagian Atas)
 # =========================================================================
-st.subheader("📥 Struktur & Pemasukan Data")
+st.subheader("📥 Pemasukan Data")
 
 if "📁 Unggah File" in input_method:
     uploaded_file = st.file_uploader("Pilih dokumen data (.xlsx, .xls, .csv)", type=["xlsx", "xls", "csv"])
@@ -61,12 +47,11 @@ if "📁 Unggah File" in input_method:
                 df = pd.read_csv(uploaded_file)
             else:
                 df = pd.read_excel(uploaded_file)
-            st.toast("Sukses: Dokumen berhasil diunggah ke laboratorium!", icon="✅")
             numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         except Exception as e:
             st.error(f"Gagal membaca file dokumen: {e}")
 else:
-    # Mode Mengetik Data Manual langsung di Layar
+    # Mode Mengetik Data Manual
     col_in1, col_in2 = st.columns(2)
     with col_in1:
         var1_name = st.text_input("Nama Variabel A:", "Nilai_Statistika")
@@ -81,12 +66,13 @@ else:
             data_dict[var1_name] = [float(x.strip()) for x in var1_data.split(",") if x.strip() != ""]
         if var2_data:
             data_dict[var2_name] = [float(x.strip()) for x in var2_data.split(",") if x.strip() != ""]
+        
         if data_dict:
-            # Cari panjang maksimum agar tidak error jika jumlah data tidak sama
+            # Menyeimbangkan panjang data otomatis agar tidak error pandas
             max_len = max(len(v) for v in data_dict.values())
             for k in data_dict:
                 while len(data_dict[k]) < max_len:
-                    data_dict[k].append(np.nan) # Berikan nilai kosong jika tidak seimbang
+                    data_dict[k].append(np.nan)
             df = pd.DataFrame(data_dict)
             numeric_cols = df.columns.tolist()
     except ValueError:
@@ -95,32 +81,31 @@ else:
 # Memastikan data tersedia sebelum merender Lab Workspace
 if not df.empty and len(numeric_cols) > 0:
     
-    # Tampilkan Pratinjau Data dengan Expandable Tab yang interaktif
-    with st.expander("🔍 Lihat Matriks Data Laboratorium", expanded=False):
+    with st.expander("🔍 Lihat Matriks Data Laboratorium", expanded=True):
         st.dataframe(df, use_container_width=True)
     
     st.markdown("---")
     
-    # =========================================================================
-    # LAB WORKSPACE (Menggunakan Pemisah Tab Eksklusif ala StatLab)
-    # =========================================================================
+    # TAB INTERAKTIF ALA STATLAB
     tab1, tab2, tab3 = st.tabs(["🔢 Ringkasan Statistika", "📊 Ruang Visualisasi", "📝 Interpretasi Lab"])
     
-    # Penentuan Warna Berdasarkan Pilihan Tema
-    color_map = {"Deep Ocean (Blue)": "skyblue", "Emerald Nature (Green)": "seagreen", "Magma Sunset": "magma", "Cyberpunk": "coolwarm"}
-    sns_palette = color_map[theme_color]
-    single_color = "skyblue" if theme_color=="Deep Ocean (Blue)" else "mediumseagreen" if theme_color=="Emerald Nature (Green)" else "#ff7f0e" if theme_color=="Magma Sunset" else "#e377c2"
+    # Penentuan Warna Grafik
+    single_color = "skyblue"
+    if theme_color == "Hijau (Emerald)":
+        single_color = "mediumseagreen"
+    elif theme_color == "Jingga (Sunset)":
+        single_color = "coral"
 
     # --- TAB 1: KALKULASI PARAMETER STATISTIKA ---
     with tab1:
         st.subheader("📐 Pengukuran Parameter Deskriptif")
         
-        col_select1, col_select2 = st.columns([1, 2])
+        col_select1, col_select2 = st.columns(2)
         with col_select1:
             selected_vars = st.multiselect("Variabel Target:", numeric_cols, default=numeric_cols)
         with col_select2:
             options = ["N", "Min", "Max", "Mean", "Median", "Modus", "Varians", "Standar Deviasi", "Q1", "Q2", "Q3"]
-            selected_metrics = st.multiselect("Parameter Ukuran:", options, default=options[:5])
+            selected_metrics = st.multiselect("Parameter Ukuran:", options, default=["N", "Min", "Max", "Mean", "Median"])
             
         if selected_vars and selected_metrics:
             summary_dict = {}
@@ -133,7 +118,11 @@ if not df.empty and len(numeric_cols) > 0:
                 if "Mean" in selected_metrics: res["Mean (Rata-rata)"] = round(c_data.mean(), 3) if not c_data.empty else np.nan
                 if "Median" in selected_metrics: res["Median"] = c_data.median() if not c_data.empty else np.nan
                 if "Modus" in selected_metrics: 
-                    res["Modus"] = c_data.mode().iloc[0] if not c_data.empty and not c_data.mode().empty else np.nan
+                    if not c_data.empty:
+                        m_val = c_data.mode()
+                        res["Modus"] = m_val.iloc[0] if not m_val.empty else np.nan
+                    else:
+                        res["Modus"] = np.nan
                 if "Varians" in selected_metrics: res["Varians"] = round(c_data.var(), 3) if not c_data.empty else np.nan
                 if "Standar Deviasi" in selected_metrics: res["Standar Deviasi"] = round(c_data.std(), 3) if not c_data.empty else np.nan
                 if "Q1" in selected_metrics: res["Kuartil 1 (Q1)"] = c_data.quantile(0.25) if not c_data.empty else np.nan
@@ -142,49 +131,59 @@ if not df.empty and len(numeric_cols) > 0:
                 summary_dict[var] = res
             
             summary_df = pd.DataFrame(summary_dict).T
-            
-            # Tampilan Tabel Dashboard Utama
             st.dataframe(summary_df, use_container_width=True)
             
-            # Tombol Ekspor Hasil Lab
+            # Tombol Unduh Hasil
             csv = summary_df.to_csv().encode('utf-8')
             st.download_button("📥 Ekspor Tabel ke CSV", csv, "statlab_report.csv", "text/csv")
             
-            # Cetak Kartu Metrik Singkat (KPI Cards) untuk Variabel Pertama sebagai visual interaktif
+            # KPI Cards Sorotan Utama
             st.write("### 📌 Sorotan Utama (Variabel Pertama):")
             v1 = selected_vars[0]
             v1_data = df[v1].dropna()
             if not v1_data.empty:
                 kpi1, kpi2, kpi3 = st.columns(3)
                 kpi1.metric(label=f"Rata-rata {v1}", value=f"{round(v1_data.mean(), 2)}")
-                kpi2.metric(label=f"Total Data {v1}", value=f"{len(v1_data)} subjek")
-                kpi3.metric(label=f"Nilai Tertinggi", value=f"{v1_data.max()}")
+                kpi2.metric(label=f"Total Data {v1}", value=f"{len(v1_data)}")
+                kpi3.metric(label=f"Nilai Maksimum {v1}", value=f"{v1_data.max()}")
         else:
             st.warning("Silakan tentukan variabel dan ukuran statistik pada opsi di atas.")
 
-    # --- TAB 2: RUANG VISUALISASI DATA INTERAKTIF ---
+    # --- TAB 2: RUANG VISUALISASI DATA ---
     with tab2:
         st.subheader("📈 Pembuat Grafik Lab Otomatis")
-        c_col1, c_col2 = st.columns([1, 3])
+        c_col1, c_col2 = st.columns([1, 2])
         
         with c_col1:
-            chart_type = st.radio("Pilih Tipe Grafik:", ["Histogram Densitas", "Box & Whisker Plot", "Diagram Batang"])
-            var_plot = st.selectbox("Pilih Variabel Analisis Grafik:", selected_vars if 'selected_vars' in locals() and selected_vars else numeric_cols)
+            chart_type = st.radio("Pilih Tipe Grafik:", ["Histogram Densitas", "Box Plot", "Diagram Batang"])
+            var_plot = st.selectbox("Pilih Variabel Grafik:", selected_vars if 'selected_vars' in locals() and selected_vars else numeric_cols)
             
         with c_col2:
             plot_data = df[var_plot].dropna()
             if not plot_data.empty:
-                fig, ax = plt.subplots(figsize=(7, 4))
+                fig, ax = plt.subplots(figsize=(6, 3.5))
                 
                 if chart_type == "Histogram Densitas":
                     sns.histplot(plot_data, kde=True, ax=ax, color=single_color)
-                    ax.set_ylabel("Kerapatan (Frekuensi)")
-                elif chart_type == "Box & Whisker Plot":
+                elif chart_type == "Box Plot":
                     sns.boxplot(x=plot_data, ax=ax, color=single_color)
-                    ax.set_xlabel("Distribusi Nilai")
                 elif chart_type == "Diagram Batang":
                     v_counts = plot_data.value_counts().sort_index()
-                    if theme_color in ["Magma Sunset", "Cyberpunk"]:
-                        sns.barplot(x=v_counts.index, y=v_counts.values, ax=ax, palette=sns_palette)
+                    sns.barplot(x=v_counts.index, y=v_counts.values, ax=ax, color=single_color)
+                
+                ax.set_title(f"{chart_type} - {var_plot}", fontsize=10, fontweight='bold')
+                st.pyplot(fig)
+
+    # --- TAB 3: INTERPRETASI DATA ---
+    with tab3:
+        st.subheader("📝 Interpretasi Laboratorium")
+        active_vars = selected_vars if 'selected_vars' in locals() and selected_vars else numeric_cols
+        for var in active_vars:
+            v_data = df[var].dropna()
+            if not v_data.empty:
+                st.markdown(f"#### 🔹 Variabel: **{var}**")
+                st.write(f"- Terdapat **{len(v_data)}** data yang berhasil dianalisis.")
+                st.write(f"- Nilai rata-rata berada di angka **{round(v_data.mean(), 2)}**, berkisar antara **{v_data.min()}** hingga **{v_data.max()}**.")
+                st.markdown("---")
 else:
-    
+    st.info("💡 Menunggu data masuk. Silakan masukkan data manual atau unggah file di panel samping kiri untuk memulai!")
