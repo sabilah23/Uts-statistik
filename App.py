@@ -2,116 +2,208 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Pengaturan halaman
-st.set_page_config(page_title="Kalkulator Statistika Deskriptif", layout="wide")
+# ==========================================
+# 1. KONFIGURASI Halaman & TEMA STATLAB
+# ==========================================
+st.set_page_config(
+    page_title="StatLab Pro - Solusi Analisis Data",
+    page_icon="🔬",
+    layout="wide"
+)
 
-st.title("📊 Aplikasi Analisis Statistika Deskriptif")
-st.write("Dibuat untuk memenuhi Tugas UTS Statistika.")
+# Gaya CSS Kustom Profesional (Gaya Lab Statistik Modern)
+st.markdown("""
+    <style>
+    .main-header {
+        font-size: 28px !important;
+        font-weight: 700;
+        color: #0F172A; /* Slate Dark */
+        margin-bottom: 2px;
+    }
+    .tagline {
+        font-size: 14px !important;
+        color: #64748B; /* Muted text */
+        margin-bottom: 20px;
+    }
+    .card {
+        background-color: #F8FAFC;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #E2E8F0;
+        margin-bottom: 15px;
+    }
+    .metric-box {
+        background-color: #EFF6FF;
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+        border: 1px solid #BFDBFE;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# 1. Fitur Unggah Data
-st.header("1. Unggah Dataset")
-uploaded_file = st.file_uploader("Pilih file Excel (.xlsx, .xls) atau CSV", type=["xlsx", "xls", "csv"])
+# Header Aplikasi
+st.markdown('<div class="main-header">🔬 StatLab Pro v2.0</div>', unsafe_allow_html=True)
+st.markdown('<div class="tagline">Sistem Komputasi & Pengolahan Data Statistika Deskriptif Terpadu</div>', unsafe_allow_html=True)
 
-if uploaded_file is not None:
-    try:
-        # Membaca file berdasarkan formatnya
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
-        
-        st.success("Data berhasil diunggah!")
-        st.dataframe(df.head()) # Menampilkan 5 data teratas dalam bentuk tabel
-        
-        # Penanganan data kosong (Fitur Tambahan)
-        if df.isnull().sum().sum() > 0:
-            st.warning("Peringatan: Terdapat data kosong (missing values) pada dataset Anda.")
-            if st.checkbox("Isi data kosong dengan nilai rata-rata (mean)?"):
-                df = df.fillna(df.mean(numeric_only=True))
-                st.info("Data kosong berhasil diisi.")
-        
-        # Filter hanya kolom numerik
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        
-        if len(numeric_cols) == 0:
-            st.error("Tidak ada variabel numerik di dalam dataset ini!")
-        else:
-            # 2. Fitur Pilih Variabel
-            st.header("2. Pilih Variabel")
-            selected_vars = st.multiselect("Pilih satu atau beberapa variabel untuk dianalisis:", numeric_cols)
-            
-            if len(selected_vars) > 0:
-                # 3. Fitur Pilih Ukuran Statistik
-                st.header("3. Pilih Ukuran Statistik")
-                all_metrics = ["N (Jumlah Data)", "Minimum", "Maksimum", "Mean", "Median", "Modus", "Varians", "Standar Deviasi", "Kuartil (Q1, Q2, Q3)"]
-                selected_metrics = st.multiselect("Pilih ukuran statistik yang ingin dihitung:", all_metrics, default=all_metrics)
-                
-                if len(selected_metrics) > 0:
-                    st.header("4. Hasil Analisis")
-                    
-                    # Wadah untuk menampung hasil perhitungan
-                    summary_dict = {}
-                    
-                    for col in selected_vars:
-                        col_summary = {}
-                        data_col = df[col].dropna() # Mengabaikan NaN saat berhitung
-                        
-                        # Hitung otomatis sesuai pilihan pengguna
-                        if "N (Jumlah Data)" in selected_metrics:
-                            col_summary["N"] = len(data_col)
-                        if "Minimum" in selected_metrics:
-                            col_summary["Minimum"] = data_col.min()
-                        if "Maksimum" in selected_metrics:
-                            col_summary["Maksimum"] = data_col.max()
-                        if "Mean" in selected_metrics:
-                            col_summary["Mean"] = data_col.mean()
-                        if "Median" in selected_metrics:
-                            col_summary["Median"] = data_col.median()
-                        if "Modus" in selected_metrics:
-                            # Mengambil modus pertama jika ada beberapa modus
-                            col_summary["Modus"] = data_col.mode()[0] if not data_col.mode().empty else np.nan
-                        if "Varians" in selected_metrics:
-                            col_summary["Varians"] = data_col.var()
-                        if "Standar Deviasi" in selected_metrics:
-                            col_summary["Standar Deviasi"] = data_col.std()
-                        if "Kuartil (Q1, Q2, Q3)" in selected_metrics:
-                            col_summary["Q1 (Kuartil 1)"] = data_col.quantile(0.25)
-                        if "Kuartil (Q1, Q2, Q3)" in selected_metrics:
-                            col_summary["Q2 (Kuartil 2/Median)"] = data_col.quantile(0.50)
-                        if "Kuartil (Q1, Q2, Q3)" in selected_metrics:
-                            col_summary["Q3 (Kuartil 3)"] = data_col.quantile(0.75)
-                            
-                        summary_dict[col] = col_summary
-                    
-                    # Membuat Dataframe Hasil Akhir
-                    summary_df = pd.DataFrame(summary_dict)
-                    st.table(summary_df) # Menampilkan tabel ringkasan rapi
-                    
-                    # Fitur Unduh Hasil (Fitur Tambahan)
-                    csv_data = summary_df.to_csv().encode('utf-8')
-                    st.download_button(
-                        label="📥 Unduh Ringkasan Hasil (CSV)",
-                        data=csv_data,
-                        file_name="ringkasan_statistika.csv",
-                        mime="text/csv"
-                    )
-                    
-                    # Visualisasi Data (Fitur Tambahan Opsional)
-                    st.header("📈 Visualisasi Data (Opsional)")
-                    viz_type = st.selectbox("Pilih jenis grafik:", ["Tidak Ada", "Histogram", "Boxplot"])
-                    
-                    if viz_type == "Histogram":
-                        for col in selected_vars:
-                            st.write(f"**Histogram untuk {col}**")
-                            st.bar_chart(df[col].value_counts())
-                    elif viz_type == "Boxplot":
-                        for col in selected_vars:
-                            st.write(f"**Boxplot Data untuk {col}**")
-                            st.line_chart(df[col]) # Pendekatan grafik bawaan sederhana di mobile
-                            
+# Menyimpan Data Menggunakan Session State
+if 'data_makro' not in st.session_state:
+    st.session_state['data_makro'] = None
+
+# ==========================================
+# 2. TOMBOL NAVIGASI UTAMA (TABS TAMPILAN ATAS)
+# ==========================================
+tab_dashboard, tab_analisis, tab_visualisasi, tab_dokumen = st.tabs([
+    "📂 Repositori Data", 
+    "📊 Modul Analisis", 
+    "📈 Visualisasi Distribusi", 
+    "📋 Lembar Kerja UTS"
+])
+
+# ==========================================
+# TAB 1: REPOSITORI DATA
+# ==========================================
+with tab_dashboard:
+    st.subheader("1. Unggah Dataset Riset")
+    file_masuk = st.file_uploader("Pilih berkas format Microsoft Excel (.xlsx, .xls) atau CSV [wajib]", type=["xlsx", "xls", "csv"])
+    
+    if file_masuk is not None:
+        try:
+            if file_masuk.name.endswith('.csv'):
+                st.session_state['data_makro'] = pd.read_csv(file_masuk)
             else:
-                st.info("Silakan pilih minimal satu variabel untuk memulai analisis.")
-    except Exception as e:
-        st.error(f"Terjadi kesalahan saat membaca file: {e}")
-else:
-    st.info("Menunggu file diunggah... Silakan unggah file Excel atau CSV Anda.")
+                st.session_state['data_makro'] = pd.read_excel(file_masuk)
+            st.toast("Data sukses diunggah ke server StatLab!", icon="✅")
+        except Exception as kegagalan:
+            st.error(f"Gagal memproses berkas: {kegagalan}")
+            
+    # Tampilan jika data sudah terunggah
+    if st.session_state['data_makro'] is not None:
+        df = st.session_state['data_makro']
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown("##### Ringkasan Struktur Data Berhasil Dimuat:")
+        
+        # Grid Metriks Indikator Data
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.markdown(f'<div class="metric-box"><b>Total Sampel (Baris):</b><br><span style="font-size:20px; color:#1E3A8A;">{df.shape[0]}</span></div>', unsafe_allow_html=True)
+        with m2:
+            st.markdown(f'<div class="metric-box"><b>Total Variabel (Kolom):</b><br><span style="font-size:20px; color:#1E3A8A;">{df.shape[1]}</span></div>', unsafe_allow_html=True)
+        with m3:
+            total_missing = df.isnull().sum().sum()
+            warna_missing = "#10B981" if total_missing == 0 else "#EF4444"
+            st.markdown(f'<div class="metric-box"><b>Data Kosong (Missing):</b><br><span style="font-size:20px; color:{warna_missing};">{total_missing}</span></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Penanganan Data Kosong Eksploratif (Poin Kreativitas Nilai Tambah)
+        if total_missing > 0:
+            st.warning("⚠️ Perhatian: Sistem mendeteksi adanya data kosong pada dataset Anda.")
+            if st.button("Lakukan Pembersihan Otomatis (Imputasi Mean)"):
+                st.session_state['data_makro'] = df.fillna(df.mean(numeric_only=True))
+                st.rerun()
+                
+        st.markdown("##### Tabel Data Pratinjau (5 Baris Teratas):")
+        st.dataframe(df.head(), use_container_width=True)
+    else:
+        st.info("💡 **Petunjuk Awal:** Silakan unggah berkas data Anda di atas terlebih dahulu untuk membuka kunci fitur modul analisis dan grafik.")
+
+# ==========================================
+# TAB 2: MODUL ANALISIS STATISTIKA
+# ==========================================
+with tab_analisis:
+    if st.session_state['data_makro'] is not None:
+        df = st.session_state['data_makro']
+        kolom_angka = df.select_dtypes(include=[np.number]).columns.tolist()
+        
+        if len(kolom_angka) == 0:
+            st.error("Kesalahan validasi data: Tidak ditemukan variabel numerik untuk dihitung.")
+        else:
+            st.write("### ⚙️ Konfigurasi Parameter Analisis")
+            
+            # Layout Seleksi Parameter
+            s1, s2 = st.columns([1, 1])
+            with s1:
+                variabel_terpilih = st.multiselect("Pilih Variabel yang akan Dihitung:", kolom_angka, default=kolom_angka[:1])
+            with s2:
+                parameter_wajib = ["N", "Minimum", "Maksimum", "Mean", "Median", "Modus", "Varians", "Standar Deviasi", "Kuartil (Q1, Q2, Q3)"]
+                parameter_terpilih = st.multiselect("Pilih Metrik Indikator Statistika:", parameter_wajib, default=parameter_wajib)
+                
+            if len(variabel_terpilih) > 0 and len(parameter_terpilih) > 0:
+                st.write("### 📋 Hasil Ringkasan Deskriptif Eksklusif")
+                
+                matriks_hasil = {}
+                for var in variabel_terpilih:
+                    sub_hasil = {}
+                    data_clean = df[var].dropna()
+                    
+                    if "N" in parameter_terpilih: sub_hasil["N (Jumlah Data)"] = int(len(data_clean))
+                    if "Minimum" in parameter_terpilih: sub_hasil["Minimum"] = data_clean.min()
+                    if "Maksimum" in parameter_terpilih: sub_hasil["Maksimum"] = data_clean.max()
+                    if "Mean" in parameter_terpilih: sub_hasil["Mean (Rata-rata)"] = round(data_clean.mean(), 4)
+                    if "Median" in parameter_terpilih: sub_hasil["Median"] = data_clean.median()
+                    if "Modus" in parameter_terpilih: 
+                        md = data_clean.mode()
+                        sub_hasil["Modus"] = md.iloc[0] if not md.empty else np.nan
+                    if "Varians" in parameter_terpilih: sub_hasil["Varians"] = round(data_clean.var(), 4)
+                    if "Standar Deviasi" in parameter_terpilih: sub_hasil["Standar Deviasi"] = round(data_clean.std(), 4)
+                    if "Kuartil (Q1, Q2, Q3)" in parameter_terpilih:
+                        sub_hasil["Kuartil 1 (Q1)"] = data_clean.quantile(0.25)
+                        sub_hasil["Kuartil 2 (Q2/Med)"] = data_clean.quantile(0.50)
+                        sub_hasil["Kuartil 3 (Q3)"] = data_clean.quantile(0.75)
+                        
+                    matriks_hasil[var] = sub_hasil
+                
+                df_akhir = pd.DataFrame(matriks_hasil)
+                st.dataframe(df_akhir.style.highlight_max(axis=1, color='#D1FAE5').highlight_min(axis=1, color='#FEE2E2'), use_container_width=True)
+                
+                # Fitur Unduh Ekspor Data Ringkasan Hasil
+                csv_siap = df_akhir.to_csv().encode('utf-8')
+                st.download_button(
+                    label="📥 Ekspor Tabel Hasil ke CSV",
+                    data=csv_siap,
+                    file_name="Laporan_StatLab_Pro.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.warning("Silakan tentukan minimal 1 variabel dan 1 metrik parameter statistik di atas.")
+    else:
+        st.warning("Akses Ditolak: Anda belum memasukkan berkas data pada Tab 'Repositori Data'.")
+
+# ==========================================
+# TAB 3: VISUALISASI DISTRIBUSI
+# ==========================================
+with tab_visualisasi:
+    if st.session_state['data_makro'] is not None:
+        df = st.session_state['data_makro']
+        kolom_angka = df.select_dtypes(include=[np.number]).columns.tolist()
+        
+        if len(kolom_angka) > 0:
+            st.write("### 📊 Pembuat Grafik Interaktif")
+            v_col1, v_col2 = st.columns([1, 2])
+            
+            with v_col1:
+                pilih_var_grafik = st.selectbox("Pilih Variabel Analisis:", kolom_angka)
+                tipe_grafik = st.radio("Metode Visualisasi Grafis:", ["Histogram Distribusi", "Line Chart (Tren Runtun Waktu)"])
+                
+            with v_col2:
+                st.info(f"Menampilkan {tipe_grafik} untuk Variabel: **{pilih_var_grafik}**")
+                if tipe_grafik == "Histogram Distribusi":
+                    frekuensi = df[pilih_var_grafik].value_counts().sort_index()
+                    st.bar_chart(frekuensi, color="#0284C7")
+                elif tipe_grafik == "Line Chart (Tren Runtun Waktu)":
+                    st.line_chart(df[pilih_var_grafik], color="#10B981")
+        else:
+            st.error("Tidak ditemukan data angka untuk pembuatan grafik.")
+    else:
+        st.warning("Akses Ditolak: Anda belum memasukkan berkas data pada Tab 'Repositori Data'.")
+
+# ==========================================
+# TAB 4: LEMBAR KERJA UTS (INFORMASI AKADEMIK)
+# ==========================================
+with tab_dokumen:
+    st.write("### 📝 Lembar Kendali Mutu Ujian")
+    st.markdown("""
+    <div style="background-color: #F8FAFC; padding: 20px; border-radius: 8px; border: 1px solid #CBD5E1;">
+        <h4 style="color:#0F172A; margin-top:0;">INFORMASI UJIAN TENGAH SEMESTER (UTS)</h4>
+        <hr style="margin: 10px 0;">
+        <table style="width:100%; font-size:14px; border-collapse:collapse;">
