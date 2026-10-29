@@ -1,483 +1,226 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.express as px
 import io
 
+# 1. Konfigurasi Halaman (Desain Profesional & Responsif HP)
 st.set_page_config(
-    page_title="Statistika Deskriptif",
+    page_title="StatLab - Deskriptif",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
+# Kustomisasi CSS untuk mempercantik UI di HP dan PC
 st.markdown("""
-<style>
-.block-container {
-    padding-top: 2rem;
-}
+    <style>
+    .main-header { font-size:28px !important; font-weight: bold; color: #1E3A8A; margin-bottom: 5px; }
+    .sub-header { font-size:16px !important; color: #4B5563; margin-bottom: 20px; }
+    .card { background-color: #F3F4F6; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+    </style>
+""", unsafe_style_parser=True)
 
-.card {
-    padding: 18px;
-    border-radius: 15px;
-    border: 1px solid #dddddd;
-    text-align: center;
-}
+st.markdown('<div class="main-header">📊 StatLab: Analisis Statistika Deskriptif</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Aplikasi Interaktif Pengolahan Data Praktis & Profesional</div>', unsafe_allow_html=True)
 
-.card-title {
-    font-size: 14px;
-}
+# 2. Inisialisasi State Data agar Pilihan Fitur Tetap Muncul di Layar
+if 'df' not in st.session_state:
+    st.session_state.df = None
 
-.card-value {
-    font-size: 25px;
-    font-weight: bold;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-st.title("📊 Statistika Deskriptif")
-
-st.divider()
-
-
-# =========================
-# UPLOAD DATA
-# =========================
-
-file = st.file_uploader(
-    "📂 Upload Dataset",
-    type=["xlsx", "xls", "csv"]
-)
-
-if file is None:
-    st.info("Silakan upload dataset.")
-    st.stop()
-
-
-# =========================
-# MEMBACA DATA
-# =========================
-
-try:
-
-    if file.name.endswith(".csv"):
-        df = pd.read_csv(file)
-
-    else:
-        df = pd.read_excel(file)
-
-except:
-
-    st.error("File tidak dapat dibaca.")
-    st.stop()
-
-
-# =========================
-# INFORMASI DATA
-# =========================
-
-jumlah_data = len(df)
-jumlah_variabel = len(df.columns)
-jumlah_missing = int(df.isna().sum().sum())
-
-c1, c2, c3 = st.columns(3)
-
-with c1:
-    st.markdown(
-        f"""
-        <div class="card">
-            <div class="card-title">Jumlah Data</div>
-            <div class="card-value">{jumlah_data}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with c2:
-    st.markdown(
-        f"""
-        <div class="card">
-            <div class="card-title">Jumlah Variabel</div>
-            <div class="card-value">{jumlah_variabel}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-with c3:
-    st.markdown(
-        f"""
-        <div class="card">
-            <div class="card-title">Missing Value</div>
-            <div class="card-value">{jumlah_missing}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-st.divider()
-
-
-# =========================
-# MENU
-# =========================
-
-menu = st.radio(
-    "",
-    [
-        "📋 Data",
-        "📊 Statistik",
-        "📈 Grafik"
-    ],
+# 3. PANEL INPUT (Selalu tampil di layar utama)
+st.markdown("### 📥 Langkah 1: Input Data")
+input_method = st.radio(
+    "Pilih Metode Input Data:",
+    ("Ketik Variabel & Data Manual", "Unggah File (Excel/.xlsx/.xls atau .csv)"),
     horizontal=True
 )
 
+if input_method == "Ketik Variabel & Data Manual":
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        var_name = st.text_input("Nama Variabel Numerik:", value="Nilai_Ujian")
+    with col2:
+        raw_data = st.text_area("Masukkan Data (pisahkan dengan koma atau spasi):", value="85, 90, 78, 92, 88, 65, 80, 95, 70, missing, 88")
+    
+    # Tombol Proses Data Manual
+    if st.button("Proses Data Manual", type="primary"):
+        try:
+            # Parsing data, mendukung string 'missing', 'nan', atau kosong sebagai NaN
+            tokens = raw_data.replace('\n', ',').replace(' ', ',').split(',')
+            parsed_data = []
+            for t in tokens:
+                t = t.strip()
+                if t == '': continue
+                if t.lower() in ['missing', 'nan', 'null', '-', '']:
+                    parsed_data.append(np.nan)
+                else:
+                    parsed_data.append(float(t))
+            
+            st.session_state.df = pd.DataFrame({var_name: parsed_data})
+            st.success("Data manual berhasil diproses!")
+        except Exception as e:
+            st.error(f"Gagal memproses data. Pastikan format benar (hanya angka). Error: {e}")
 
-# =========================================================
-# DATA
-# =========================================================
-
-if menu == "📋 Data":
-
-    st.subheader("Data")
-
-    st.dataframe(
-        df,
-        use_container_width=True,
-        height=500
-    )
-
-
-# =========================================================
-# STATISTIK
-# =========================================================
-
-elif menu == "📊 Statistik":
-
-    st.subheader("Statistika Deskriptif")
-
-    numeric_columns = df.select_dtypes(
-        include=np.number
-    ).columns.tolist()
-
-    if not numeric_columns:
-        st.warning("Tidak terdapat variabel numerik.")
-        st.stop()
-
-    variables = st.multiselect(
-        "Pilih Variabel",
-        numeric_columns,
-        default=numeric_columns[:1]
-    )
-
-    statistics = st.multiselect(
-        "Pilih Ukuran Statistik",
-        [
-            "N",
-            "Minimum",
-            "Maksimum",
-            "Mean",
-            "Median",
-            "Modus",
-            "Varians",
-            "Standar Deviasi",
-            "Q1",
-            "Q2",
-            "Q3"
-        ],
-        default=[
-            "N",
-            "Minimum",
-            "Maksimum",
-            "Mean",
-            "Median",
-            "Modus",
-            "Varians",
-            "Standar Deviasi",
-            "Q1",
-            "Q2",
-            "Q3"
-        ]
-    )
-
-    if variables and statistics:
-
-        hasil = []
-
-        for variable in variables:
-
-            data = pd.to_numeric(
-                df[variable],
-                errors="coerce"
-            ).dropna()
-
-            if len(data) == 0:
-                continue
-
-            modus = data.mode()
-
-            if len(modus) > 1:
-                modus_hasil = ", ".join(
-                    str(x) for x in modus.tolist()
-                )
-            elif len(modus) == 1:
-                modus_hasil = modus.iloc[0]
+else:
+    uploaded_file = st.file_uploader("Pilih file Excel atau CSV", type=["xlsx", "xls", "csv"])
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                st.session_state.df = pd.read_csv(uploaded_file)
             else:
-                modus_hasil = "-"
+                st.session_state.df = pd.read_excel(uploaded_file)
+            st.success("File berhasil diunggah!")
+        except Exception as e:
+            st.error(f"Gagal membaca file. Error: {e}")
 
-            row = {
-                "Variabel": variable
-            }
+# Tampilkan Tabel Data jika ada
+if st.session_state.df is not None:
+    with st.expansions("🔍 Lihat Tabel Data Aktif", expanded=False):
+        st.dataframe(st.session_state.df, use_container_width=True)
 
-            if "N" in statistics:
-                row["N"] = len(data)
+# 4. PANEL FITUR UTAMA (Tetap Render Meskipun Data Belum Ada)
+st.markdown("---")
+st.markdown("### ⚙️ Langkah 2: Konfigurasi Fitur & Parameter Analisis")
 
-            if "Minimum" in statistics:
-                row["Minimum"] = data.min()
+# Cek kolom numerik jika data ada, jika tidak sediakan dummy/kosong
+if st.session_state.df is not None:
+    numeric_cols = st.session_state.df.select_dtypes(include=[np.number]).columns.tolist()
+    all_cols = st.session_state.df.columns.tolist()
+else:
+    numeric_cols = ["Belum ada data numerik"]
+    all_cols = ["Belum ada data"]
 
-            if "Maksimum" in statistics:
-                row["Maksimum"] = data.max()
+# Fitur Pilih Variabel
+selected_vars = st.multiselect(
+    "➡️ Pilih Variabel Numerik untuk Dianalisis:",
+    options=numeric_cols,
+    default=numeric_cols[:1] if st.session_state.df is not None and numeric_cols else numeric_cols
+)
 
-            if "Mean" in statistics:
-                row["Mean"] = data.mean()
+# Fitur Pilih Ukuran Statistika Deskriptif
+stat_options = {
+    "Jumlah Data (N)": "count",
+    "Minimum": "min",
+    "Maksimum": "max",
+    "Mean (Rata-rata)": "mean",
+    "Median": "median",
+    "Modus": "mode",
+    "Varians": "var",
+    "Standar Deviasi": "std",
+    "Kuartil 1 (Q1)": "q1",
+    "Kuartil 2 (Q2)": "q2",
+    "Kuartil 3 (Q3)": "q3"
+}
 
-            if "Median" in statistics:
-                row["Median"] = data.median()
+selected_stats = st.multiselect(
+    "🧮 Pilih Ukuran Statistika yang Ingin Dihitung:",
+    options=list(stat_options.keys()),
+    default=list(stat_options.keys())
+)
 
-            if "Modus" in statistics:
-                row["Modus"] = modus_hasil
-
-            if "Varians" in statistics:
-                row["Varians"] = (
-                    data.var()
-                    if len(data) > 1
-                    else np.nan
-                )
-
-            if "Standar Deviasi" in statistics:
-                row["Standar Deviasi"] = (
-                    data.std()
-                    if len(data) > 1
-                    else np.nan
-                )
-
-            if "Q1" in statistics:
-                row["Q1"] = data.quantile(0.25)
-
-            if "Q2" in statistics:
-                row["Q2"] = data.quantile(0.50)
-
-            if "Q3" in statistics:
-                row["Q3"] = data.quantile(0.75)
-
-            hasil.append(row)
-
-        hasil_df = pd.DataFrame(hasil)
-
-        st.dataframe(
-            hasil_df,
-            use_container_width=True
-        )
-
-        # CSV
-
-        csv = hasil_df.to_csv(
-            index=False
-        ).encode("utf-8")
-
-        st.download_button(
-            "⬇️ Download CSV",
-            csv,
-            "hasil_statistika.csv",
-            "text/csv"
-        )
-
-        # EXCEL
-
-        buffer = io.BytesIO()
-
-        with pd.ExcelWriter(
-            buffer,
-            engine="openpyxl"
-        ) as writer:
-
-            hasil_df.to_excel(
-                writer,
-                index=False,
-                sheet_name="Statistika"
-            )
-
-        st.download_button(
-            "⬇️ Download Excel",
-            buffer.getvalue(),
-            "hasil_statistika.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-
-# =========================================================
-# GRAFIK
-# =========================================================
-
-elif menu == "📈 Grafik":
-
-    st.subheader("Grafik")
-
-    numeric_columns = df.select_dtypes(
-        include=np.number
-    ).columns.tolist()
-
-    if not numeric_columns:
-        st.warning("Tidak terdapat variabel numerik.")
-        st.stop()
-
-    variable = st.selectbox(
-        "Pilih Variabel",
-        numeric_columns
+# Fitur Tambahan UI: Pengaturan Warna & Visualisasi
+st.markdown("#### 🎨 Pengaturan Eksplorasi Visual")
+col_c1, col_c2 = st.columns(2)
+with col_c1:
+    chart_color = st.color_picker("Pilih Warna Utama Grafik:", "#1E3A8A")
+with col_c2:
+    chart_types = st.multiselect(
+        "📊 Pilih Jenis Grafik yang Ingin Ditampilkan:",
+        options=["Histogram", "Boxplot", "Diagram Batang (Bar)", "Diagram Lingkaran (Pie)", "Tabel Distribusi Frekuensi"],
+        default=["Histogram", "Boxplot"]
     )
 
-    jenis_grafik = st.selectbox(
-        "Pilih Grafik",
-        [
-            "Histogram",
-            "Boxplot",
-            "Diagram Batang",
-            "Diagram Garis",
-            "Diagram Lingkaran"
-        ]
+# 5. EKSEKUSI DAN OUTPUT
+st.markdown("---")
+st.markdown("### 📊 Langkah 3: Hasil Analisis Ringkasan")
+
+# Proteksi pemicu jika tombol ditekan namun data belum siap
+if st.session_state.df is None:
+    st.info("💡 Menunggu input data... Silakan isi data di Langkah 1 untuk melihat kalkulasi otomatis.")
+elif not selected_vars or "Belum ada data numerik" in selected_vars:
+    st.warning("⚠️ Silakan pilih minimal satu variabel numerik pada Langkah 2.")
+elif not selected_stats:
+    st.warning("⚠️ Silakan pilih minimal satu ukuran statistika.")
+else:
+    # Proses Data Nyata
+    df_working = st.session_state.df[selected_vars].copy()
+    
+    # Penanganan Data Kosong (Missing Values)
+    missing_info = df_working.isnull().sum()
+    if missing_info.sum() > 0:
+        st.warning(f"ℹ️ Terdeteksi data kosong (Missing Values). Sistem otomatis mengecualikannya dalam perhitungan statistik dasar.")
+        with st.expansions("Detail Data Kosong Per Variabel"):
+            st.write(missing_info)
+
+    # Kalkulasi Statistika Deskriptif Kustom
+    summary_results = {}
+    for var in selected_vars:
+        col_data = df_working[var].dropna()
+        var_metrics = {}
+        
+        if "Jumlah Data (N)" in selected_stats: var_metrics["Jumlah Data (N)"] = len(col_data)
+        if "Minimum" in selected_stats: var_metrics["Minimum"] = col_data.min() if not col_data.empty else np.nan
+        if "Maksimum" in selected_stats: var_metrics["Maksimum"] = col_data.max() if not col_data.empty else np.nan
+        if "Mean (Rata-rata)" in selected_stats: var_metrics["Mean (Rata-rata)"] = col_data.mean() if not col_data.empty else np.nan
+        if "Median" in selected_stats: var_metrics["Median"] = col_data.median() if not col_data.empty else np.nan
+        if "Modus" in selected_stats: 
+            mode_val = col_data.mode()
+            var_metrics["Modus"] = mode_val.iloc[0] if not mode_val.empty else np.nan
+        if "Varians" in selected_stats: var_metrics["Varians"] = col_data.var() if not col_data.empty else np.nan
+        if "Standar Deviasi" in selected_stats: var_metrics["Standar Deviasi"] = col_data.std() if not col_data.empty else np.nan
+        if "Kuartil 1 (Q1)" in selected_stats: var_metrics["Kuartil 1 (Q1)"] = col_data.quantile(0.25) if not col_data.empty else np.nan
+        if "Kuartil 2 (Q2)" in selected_stats: var_metrics["Kuartil 2 (Q2)"] = col_data.quantile(0.50) if not col_data.empty else np.nan
+        if "Kuartil 3 (Q3)" in selected_stats: var_metrics["Kuartil 3 (Q3)"] = col_data.quantile(0.75) if not col_data.empty else np.nan
+        
+        summary_results[var] = var_metrics
+    
+    res_df = pd.DataFrame(summary_results)
+    
+    # Tampilkan Tabel Ringkasan Rapi
+    st.success("Perhitungan Berhasil!")
+    st.dataframe(res_df.style.format(precision=3), use_container_width=True)
+    
+    # Fitur Unduh Hasil Ringkasan ke CSV
+    csv_data = res_df.to_csv().encode('utf-8')
+    st.download_button(
+        label="📥 Unduh Ringkasan Hasil (.CSV)",
+        data=csv_data,
+        file_name='ringkasan_statlab.csv',
+        mime='text/csv',
     )
+    
+    # Interpertasi Otomatis Sederhana (Untuk 1 variabel utama)
+    st.markdown("#### 📝 Interpretasi Hasil Otomatis")
+    for var in selected_vars:
+        col_data = df_working[var].dropna()
+        if not col_data.empty:
+            st.write(f"Variabel **{var}** memiliki rata-rata sebesar **{col_data.mean():.2f}** dengan rentang nilai dari **{col_data.min()}** hingga **{col_data.max()}**. Nilai tengah (median) data ini berada pada **{col_data.median()}**.")
 
-    data = pd.to_numeric(
-        df[variable],
-        errors="coerce"
-    ).dropna()
-
-
-    # HISTOGRAM
-
-    if jenis_grafik == "Histogram":
-
-        fig, ax = plt.subplots(
-            figsize=(10, 5)
-        )
-
-        ax.hist(
-            data,
-            bins="auto"
-        )
-
-        ax.set_xlabel(variable)
-        ax.set_ylabel("Frekuensi")
-        ax.set_title(f"Histogram {variable}")
-
-        ax.grid(alpha=0.2)
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
-
-    # BOXPLOT
-
-    elif jenis_grafik == "Boxplot":
-
-        fig, ax = plt.subplots(
-            figsize=(10, 4)
-        )
-
-        ax.boxplot(
-            data,
-            vert=False
-        )
-
-        ax.set_xlabel(variable)
-        ax.set_title(f"Boxplot {variable}")
-
-        ax.grid(alpha=0.2)
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
-
-    # DIAGRAM BATANG
-
-    elif jenis_grafik == "Diagram Batang":
-
-        frekuensi = data.value_counts().sort_index()
-
-        fig, ax = plt.subplots(
-            figsize=(10, 5)
-        )
-
-        ax.bar(
-            frekuensi.index.astype(str),
-            frekuensi.values
-        )
-
-        ax.set_xlabel(variable)
-        ax.set_ylabel("Frekuensi")
-        ax.set_title(f"Diagram Batang {variable}")
-
-        plt.xticks(rotation=45)
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
-
-    # DIAGRAM GARIS
-
-    elif jenis_grafik == "Diagram Garis":
-
-        fig, ax = plt.subplots(
-            figsize=(10, 5)
-        )
-
-        ax.plot(
-            data.reset_index(drop=True)
-        )
-
-        ax.set_xlabel("Observasi")
-        ax.set_ylabel(variable)
-        ax.set_title(f"Diagram Garis {variable}")
-
-        ax.grid(alpha=0.2)
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
-
-    # DIAGRAM LINGKARAN
-
-    elif jenis_grafik == "Diagram Lingkaran":
-
-        frekuensi = data.value_counts()
-
-        fig, ax = plt.subplots(
-            figsize=(7, 7)
-        )
-
-        ax.pie(
-            frekuensi.values,
-            labels=frekuensi.index.astype(str),
-            autopct="%1.1f%%"
-        )
-
-        ax.set_title(
-            f"Diagram Lingkaran {variable}"
-        )
-
-        st.pyplot(fig)
-
-        plt.close(fig)
-
-
-st.divider()
-
-st.markdown(
-    "<center>📊 Statistika Deskriptif</center>",
-    unsafe_allow_html=True
-    )
+    # PETA DIAGRAM / VISUALISASI BANYAK
+    st.markdown("### 📉 Eksplorasi Visual (Diagram Interaktif)")
+    
+    for var in selected_vars:
+        st.markdown(f"#### Analisis Grafik untuk Variabel: **{var}**")
+        data_clean = df_working[[var]].dropna()
+        
+        # Grid layout responsif grafik
+        g_col1, g_col2 = st.columns(2)
+        
+        if "Histogram" in chart_types:
+            fig_hist = px.histogram(data_clean, x=var, title=f"Histogram Distribusi {var}", color_discrete_sequence=[chart_color])
+            g_col1.plotly_chart(fig_hist, use_container_width=True)
+            
+        if "Boxplot" in chart_types:
+            fig_box = px.box(data_clean, y=var, title=f"Boxplot Pencilan {var}", color_discrete_sequence=[chart_color])
+            g_col2.plotly_chart(fig_box, use_container_width=True)
+            
+        if "Diagram Batang (Bar)" in chart_types:
+            fig_bar = px.bar(data_clean, y=var, title=f"Diagram Urutan Data {var}", color_discrete_sequence=[chart_color])
+            g_col1.plotly_chart(fig_bar, use_container_width=True)
+            
+        if "Diagram Lingkaran (Pie)" in chart_types:
+            # Mengelompokkan data ke dalam bins otomatis untuk representasi Pie Chart yang masuk akal
+            counts, bins = np.histogram(data_clean[var], bins=5)
+            labels = [f"{bins[i]:.1f} - {bins[i+1]:.1f}" for i in range(len(counts))]
+            
