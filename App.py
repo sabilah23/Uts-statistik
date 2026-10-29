@@ -12,16 +12,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Kustomisasi CSS untuk mempercantik UI di HP dan PC
-st.markdown("""
-# Kustomisasi CSS untuk mempercantik UI di HP dan PC (SUDAH DIPERBAIKI)
-st.markdown("""
+# KUSTOMISASI CSS AMAN (Sudah Diperbaiki)
+st.markdown(
+    """
     <style>
     .main-header { font-size:28px !important; font-weight: bold; color: #1E3A8A; margin-bottom: 5px; }
     .sub-header { font-size:16px !important; color: #4B5563; margin-bottom: 20px; }
     .card { background-color: #F3F4F6; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
     </style>
-""", unsafe_allow_html=True)
+    """, 
+    unsafe_allow_html=True
+)
+
 st.markdown('<div class="main-header">📊 StatLab: Analisis Statistika Deskriptif</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Aplikasi Interaktif Pengolahan Data Praktis & Profesional</div>', unsafe_allow_html=True)
 
@@ -38,7 +40,7 @@ input_method = st.radio(
 )
 
 if input_method == "Ketik Variabel & Data Manual":
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns(2)
     with col1:
         var_name = st.text_input("Nama Variabel Numerik:", value="Nilai_Ujian")
     with col2:
@@ -47,7 +49,6 @@ if input_method == "Ketik Variabel & Data Manual":
     # Tombol Proses Data Manual
     if st.button("Proses Data Manual", type="primary"):
         try:
-            # Parsing data, mendukung string 'missing', 'nan', atau kosong sebagai NaN
             tokens = raw_data.replace('\n', ',').replace(' ', ',').split(',')
             parsed_data = []
             for t in tokens:
@@ -75,9 +76,9 @@ else:
         except Exception as e:
             st.error(f"Gagal membaca file. Error: {e}")
 
-# Tampilkan Tabel Data jika ada
+# Tampilkan Tabel Data jika ada (Sudah diperbaiki ke st.expander)
 if st.session_state.df is not None:
-    with st.expansions("🔍 Lihat Tabel Data Aktif", expanded=False):
+    with st.expander("🔍 Lihat Tabel Data Aktif", expanded=False):
         st.dataframe(st.session_state.df, use_container_width=True)
 
 # 4. PANEL FITUR UTAMA (Tetap Render Meskipun Data Belum Ada)
@@ -144,14 +145,13 @@ elif not selected_vars or "Belum ada data numerik" in selected_vars:
 elif not selected_stats:
     st.warning("⚠️ Silakan pilih minimal satu ukuran statistika.")
 else:
-    # Proses Data Nyata
     df_working = st.session_state.df[selected_vars].copy()
     
-    # Penanganan Data Kosong (Missing Values)
+    # Penanganan Data Kosong (Sudah diperbaiki ke st.expander)
     missing_info = df_working.isnull().sum()
     if missing_info.sum() > 0:
         st.warning(f"ℹ️ Terdeteksi data kosong (Missing Values). Sistem otomatis mengecualikannya dalam perhitungan statistik dasar.")
-        with st.expansions("Detail Data Kosong Per Variabel"):
+        with st.expander("Detail Data Kosong Per Variabel"):
             st.write(missing_info)
 
     # Kalkulasi Statistika Deskriptif Kustom
@@ -178,11 +178,9 @@ else:
     
     res_df = pd.DataFrame(summary_results)
     
-    # Tampilkan Tabel Ringkasan Rapi
     st.success("Perhitungan Berhasil!")
     st.dataframe(res_df.style.format(precision=3), use_container_width=True)
     
-    # Fitur Unduh Hasil Ringkasan ke CSV
     csv_data = res_df.to_csv().encode('utf-8')
     st.download_button(
         label="📥 Unduh Ringkasan Hasil (.CSV)",
@@ -191,21 +189,18 @@ else:
         mime='text/csv',
     )
     
-    # Interpertasi Otomatis Sederhana (Untuk 1 variabel utama)
     st.markdown("#### 📝 Interpretasi Hasil Otomatis")
     for var in selected_vars:
         col_data = df_working[var].dropna()
         if not col_data.empty:
             st.write(f"Variabel **{var}** memiliki rata-rata sebesar **{col_data.mean():.2f}** dengan rentang nilai dari **{col_data.min()}** hingga **{col_data.max()}**. Nilai tengah (median) data ini berada pada **{col_data.median()}**.")
 
-    # PETA DIAGRAM / VISUALISASI BANYAK
     st.markdown("### 📉 Eksplorasi Visual (Diagram Interaktif)")
     
     for var in selected_vars:
         st.markdown(f"#### Analisis Grafik untuk Variabel: **{var}**")
         data_clean = df_working[[var]].dropna()
         
-        # Grid layout responsif grafik
         g_col1, g_col2 = st.columns(2)
         
         if "Histogram" in chart_types:
@@ -221,7 +216,13 @@ else:
             g_col1.plotly_chart(fig_bar, use_container_width=True)
             
         if "Diagram Lingkaran (Pie)" in chart_types:
-            # Mengelompokkan data ke dalam bins otomatis untuk representasi Pie Chart yang masuk akal
             counts, bins = np.histogram(data_clean[var], bins=5)
             labels = [f"{bins[i]:.1f} - {bins[i+1]:.1f}" for i in range(len(counts))]
+            pie_df = pd.DataFrame({'Interval': labels, 'Frekuensi': counts})
+            fig_pie = px.pie(pie_df, values='Frekuensi', names='Interval', title=f"Proporsi Interval {var}")
+            g_col2.plotly_chart(fig_pie, use_container_width=True)
+            
+        if "Tabel Distribusi Frekuensi" in chart_types:
+            counts, bins = np.histogram(data_clean[var], bins='sturges')
+s))]
             
