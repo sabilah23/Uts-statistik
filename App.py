@@ -14,13 +14,14 @@ st.set_page_config(
 
 # Kustomisasi CSS untuk mempercantik UI di HP dan PC
 st.markdown("""
+# Kustomisasi CSS untuk mempercantik UI di HP dan PC (SUDAH DIPERBAIKI)
+st.markdown("""
     <style>
     .main-header { font-size:28px !important; font-weight: bold; color: #1E3A8A; margin-bottom: 5px; }
     .sub-header { font-size:16px !important; color: #4B5563; margin-bottom: 20px; }
     .card { background-color: #F3F4F6; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
     </style>
-""", unsafe_style_parser=True)
-
+""", unsafe_allow_html=True)
 st.markdown('<div class="main-header">📊 StatLab: Analisis Statistika Deskriptif</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Aplikasi Interaktif Pengolahan Data Praktis & Profesional</div>', unsafe_allow_html=True)
 
