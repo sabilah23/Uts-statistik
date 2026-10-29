@@ -226,3 +226,33 @@ else:
             counts, bins = np.histogram(data_clean[var], bins='sturges')
 s))]
             
+            intervals = [f"[{bins[i]:.2f} : {bins[i+1]:.2f}]" for i in range(len(counts))]
+            freq_df = pd.DataFrame({'Interval Kelas': intervals, 'Frekuensi (f)': counts})
+            st.markdown(f"**Tabel Distribusi Frekuensi ({var})**")
+            st.table(freq_df)
+
+    # 6. FITUR EKSPLORASI: EKSPOR KE EXCEL (.XLSX)
+    st.markdown("---")
+    st.markdown("### 📥 Ekspor Hasil ke Excel")
+    
+    # Membuat buffer memori untuk file Excel
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        res_df.to_excel(writer, sheet_name='Ringkasan Statistik')
+        # Menyertakan tabel distribusi frekuensi ke sheet terpisah jika ada variabel
+        for var in selected_vars:
+            data_var = df_working[var].dropna()
+            if not data_var.empty:
+                c, b = np.histogram(data_var, bins='sturges')
+                ints = [f"[{b[i]:.2f} : {b[i+1]:.2f}]" for i in range(len(c))]
+                f_df = pd.DataFrame({'Interval Kelas': ints, 'Frekuensi (f)': c})
+                # Nama sheet Excel maksimal 31 karakter
+                sheet_name = f"Freq_{var}"[:30]
+                f_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                
+    st.download_button(
+        label="📄 Unduh Ringkasan Lengkap (.XLSX)",
+        data=buffer.getvalue(),
+        file_name='Analisis_StatLab_Lengkap.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
